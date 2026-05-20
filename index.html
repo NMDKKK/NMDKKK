@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>~/Kenneth DISSO</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green: #00ff41;
+    --green-dim: #00c832;
+    --green-faint: #003b0f;
+    --green-glow: rgba(0,255,65,0.15);
+    --bg: #020d04;
+    --bg2: #050f07;
+    --gray: #4a7c59;
+    --white: #d4f5dc;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--green);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* scanlines overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* CRT flicker */
+  @keyframes flicker {
+    0%,100% { opacity: 1; }
+    92% { opacity: 1; }
+    93% { opacity: 0.94; }
+    94% { opacity: 1; }
+    96% { opacity: 0.97; }
+  }
+  body { animation: flicker 8s infinite; }
+
+  /* ─── NAV ─── */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    background: rgba(2,13,4,0.92);
+    border-bottom: 1px solid var(--green-faint);
+    backdrop-filter: blur(4px);
+    z-index: 100;
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    height: 48px;
+    gap: 2rem;
+  }
+  .nav-prompt { color: var(--gray); font-size: 12px; white-space: nowrap; }
+  .nav-prompt span { color: var(--green); }
+  nav a {
+    color: var(--gray);
+    text-decoration: none;
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    transition: color 0.2s;
+  }
+  nav a:hover { color: var(--green); text-shadow: 0 0 8px var(--green); }
+  .nav-links { display: flex; gap: 1.5rem; margin-left: auto; }
+
+  /* ─── HERO ─── */
+  #hero {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    padding: 80px 2rem 2rem;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .terminal-window {
+    width: 100%;
+    border: 1px solid var(--green-faint);
+    border-radius: 6px;
+    box-shadow: 0 0 40px rgba(0,255,65,0.07), inset 0 0 80px rgba(0,255,65,0.02);
+  }
+  .terminal-bar {
+    background: #0a1a0c;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid var(--green-faint);
+    border-radius: 6px 6px 0 0;
+  }
+  .dot { width: 12px; height: 12px; border-radius: 50%; }
+  .dot-r { background: #3a1010; border: 1px solid #5a1a1a; }
+  .dot-y { background: #2a2a10; border: 1px solid #4a4a1a; }
+  .dot-g { background: #0a3010; border: 1px solid #1a5a1a; }
+  .terminal-title { margin-left: auto; margin-right: auto; font-size: 11px; color: var(--gray); }
+  .terminal-body { padding: 2rem; background: var(--bg2); border-radius: 0 0 6px 6px; }
+
+  .line { display: block; }
+  .prompt { color: var(--gray); }
+  .prompt .user { color: var(--green-dim); }
+  .prompt .at { color: var(--gray); }
+  .prompt .host { color: #00c8a0; }
+  .prompt .path { color: #4a9aff; }
+  .cmd { color: var(--white); }
+  .output { color: var(--green); margin: 0.3rem 0 1rem 0; }
+  .output .big {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: clamp(28px, 5vw, 52px);
+    line-height: 1.1;
+    color: var(--green);
+    text-shadow: 0 0 20px var(--green), 0 0 60px rgba(0,255,65,0.3);
+    display: block;
+    margin-bottom: 0.5rem;
+  }
+  .output .subtitle {
+    color: var(--green-dim);
+    font-size: 15px;
+    display: block;
+    margin-bottom: 1.2rem;
+  }
+  .output .desc { color: var(--gray); font-size: 13px; max-width: 560px; display: block; }
+  .tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 1.2rem; }
+  .tag {
+    border: 1px solid var(--green-faint);
+    color: var(--green-dim);
+    padding: 3px 10px;
+    font-size: 11px;
+    border-radius: 2px;
+    transition: all 0.2s;
+  }
+  .tag:hover { background: var(--green-glow); border-color: var(--green); color: var(--green); }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+  .cursor {
+    display: inline-block;
+    width: 9px; height: 16px;
+    background: var(--green);
+    vertical-align: text-bottom;
+    animation: blink 1s step-end infinite;
+    margin-left: 2px;
+  }
+  .cta-row { display: flex; gap: 12px; margin-top: 1.5rem; flex-wrap: wrap; }
+  .btn {
+    padding: 8px 20px;
+    border: 1px solid var(--green);
+    color: var(--green);
+    background: transparent;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s;
+    display: inline-block;
+  }
+  .btn:hover { background: var(--green); color: var(--bg); box-shadow: 0 0 20px rgba(0,255,65,0.4); }
+  .btn-ghost { border-color: var(--gray); color: var(--gray); }
+  .btn-ghost:hover { background: var(--gray); color: var(--bg); box-shadow: none; }
+
+  /* ─── SECTIONS ─── */
+  section { max-width: 900px; margin: 0 auto; padding: 5rem 2rem; }
+  .section-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 2.5rem; }
+  .section-header::before { content: '//'; color: var(--green-dim); font-size: 18px; }
+  .section-header h2 { font-size: 20px; color: var(--white); letter-spacing: 0.08em; }
+  .section-header::after { content: ''; flex: 1; height: 1px; background: var(--green-faint); }
+
+  /* ─── SKILLS ─── */
+  .skills-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+  .skill-card {
+    border: 1px solid var(--green-faint);
+    padding: 1.2rem;
+    background: var(--bg2);
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+  .skill-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px; height: 100%;
+    background: var(--green);
+    transform: scaleY(0);
+    transition: transform 0.3s;
+    transform-origin: bottom;
+  }
+  .skill-card:hover { border-color: var(--green); box-shadow: 0 0 20px rgba(0,255,65,0.08); }
+  .skill-card:hover::before { transform: scaleY(1); }
+  .skill-cat { font-size: 10px; color: var(--gray); letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 0.6rem; }
+  .skill-name { color: var(--white); font-size: 14px; margin-bottom: 0.8rem; }
+  .skill-items { display: flex; flex-wrap: wrap; gap: 6px; }
+  .skill-item { font-size: 11px; color: var(--green-dim); background: var(--green-faint); padding: 2px 8px; border-radius: 2px; }
+
+  /* ─── PROJETS ─── */
+  .projects-grid { display: grid; gap: 16px; }
+  .project-card {
+    border: 1px solid var(--green-faint);
+    background: var(--bg2);
+    padding: 1.5rem;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 1rem;
+    transition: all 0.3s;
+    position: relative;
+  }
+  .project-card:hover { border-color: var(--green); box-shadow: 0 0 30px rgba(0,255,65,0.06); }
+  .project-num { position: absolute; top: 1.2rem; right: 1.5rem; font-size: 11px; color: var(--green-faint); }
+  .project-tag { font-size: 10px; color: var(--green-dim); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 0.5rem; }
+  .project-title { color: var(--white); font-size: 16px; margin-bottom: 0.6rem; }
+  .project-desc { color: var(--gray); font-size: 12px; max-width: 600px; line-height: 1.8; }
+  .project-stack { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 1rem; }
+  .stack-item { font-size: 10px; color: var(--green); border: 1px solid var(--green-faint); padding: 2px 8px; }
+  .project-links { display: flex; gap: 10px; margin-top: 1rem; }
+  .plink { font-size: 11px; color: var(--green-dim); text-decoration: none; display: flex; align-items: center; gap: 4px; }
+  .plink:hover { color: var(--green); }
+  .plink svg { width:13px; height:13px; fill: currentColor; }
+
+  /* ─── EXPÉRIENCE ─── */
+  .timeline { position: relative; padding-left: 2rem; }
+  .timeline::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 1px; background: var(--green-faint); }
+  .titem { position: relative; margin-bottom: 2.5rem; }
+  .titem::before {
+    content: '▶';
+    position: absolute;
+    left: -2.35rem;
+    top: 0;
+    color: var(--green);
+    font-size: 10px;
+  }
+  .tdate { font-size: 10px; color: var(--gray); letter-spacing: 0.1em; margin-bottom: 0.3rem; }
+  .ttitle { color: var(--white); font-size: 15px; margin-bottom: 0.2rem; }
+  .tcompany { color: var(--green-dim); font-size: 12px; margin-bottom: 0.6rem; }
+  .tdesc { color: var(--gray); font-size: 12px; line-height: 1.8; }
+  .tdesc li { list-style: none; position: relative; padding-left: 1.2rem; }
+  .tdesc li::before { content: '$'; position: absolute; left: 0; color: var(--green-dim); }
+
+  /* ─── CONTACT ─── */
+  .contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 600px) { .contact-grid { grid-template-columns: 1fr; } }
+  .contact-card {
+    border: 1px solid var(--green-faint);
+    background: var(--bg2);
+    padding: 1.2rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    text-decoration: none;
+    transition: all 0.3s;
+    color: inherit;
+  }
+  .contact-card:hover { border-color: var(--green); box-shadow: 0 0 20px rgba(0,255,65,0.1); }
+  .contact-icon { font-size: 20px; width: 36px; text-align: center; }
+  .contact-label { font-size: 10px; color: var(--gray); text-transform: uppercase; letter-spacing: 0.1em; }
+  .contact-value { color: var(--white); font-size: 13px; }
+
+  /* ─── FOOTER ─── */
+  footer {
+    text-align: center;
+    padding: 2rem;
+    color: var(--gray);
+    font-size: 11px;
+    border-top: 1px solid var(--green-faint);
+  }
+  footer span { color: var(--green-dim); }
+
+  /* ─── ANIMATIONS ─── */
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+  .fade-in { animation: fadeIn 0.6s ease forwards; }
+  .fade-in-1 { animation-delay: 0.1s; opacity: 0; }
+  .fade-in-2 { animation-delay: 0.4s; opacity: 0; }
+  .fade-in-3 { animation-delay: 0.7s; opacity: 0; }
+  .fade-in-4 { animation-delay: 1.0s; opacity: 0; }
+  .fade-in-5 { animation-delay: 1.3s; opacity: 0; }
+
+  @keyframes typeIn {
+    from { width: 0; }
+    to { width: 100%; }
+  }
+  .typed {
+    overflow: hidden;
+    white-space: nowrap;
+    display: inline-block;
+    animation: typeIn 0.8s steps(30) 0.3s forwards;
+    width: 0;
+  }
+
+  /* scroll reveal */
+  .reveal { opacity: 0; transform: translateY(20px); transition: opacity 0.6s, transform 0.6s; }
+  .reveal.visible { opacity: 1; transform: none; }
+
+  @media (max-width: 600px) {
+    .output .big { font-size: 28px; }
+    nav { gap: 1rem; }
+    .nav-links { gap: 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-prompt">
+    <span class="user">user</span><span style="color:var(--gray)">@</span><span style="color:#00c8a0">portfolio</span><span style="color:var(--gray)">:~$</span>
+  </div>
+  <div class="nav-links">
+    <a href="#skills">compétences</a>
+    <a href="#projects">projets</a>
+    <a href="#experience">expérience</a>
+    <a href="#contact">contact</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="terminal-window fade-in fade-in-1">
+    <div class="terminal-bar">
+      <div class="dot dot-r"></div>
+      <div class="dot dot-y"></div>
+      <div class="dot dot-g"></div>
+      <span class="terminal-title">bash — 80×24</span>
+    </div>
+    <div class="terminal-body">
+      <span class="line fade-in fade-in-1">
+        <span class="prompt"><span class="user">admin</span><span class="at">@</span><span class="host">srv-portfolio</span>:<span class="path">~</span>$ </span>
+        <span class="cmd">./whoami.sh</span>
+      </span>
+
+      <div class="output fade-in fade-in-2">
+        <span class="big">DISSO Kenneth</span>
+        <span class="subtitle">Architecte Système Junior</span>
+        <span class="desc">
+          Administrateur système avec 3 ans d'expérience dans la gestion et l'optimisation des infrastructures informatiques.<br>
+          Expert en virtualisation et gestion de projets informatiques.<br>
+          En quête de nouvelles opportunités pour mettre mon expertise au service d'une organisation fiable.
+        </span>
+        <div class="tags">
+          <span class="tag">Windows Server</span>
+          <span class="tag">Linux</span>
+          <span class="tag">VMware</span>
+          <span class="tag">HyperV</span>
+          <span class="tag">Firewall</span>
+          <span class="tag">VLAN / VPN</span>
+          <span class="tag">Mikrotik</span>
+          <span class="tag">Bash / JS</span>
+        </div>
+      </div>
+
+      <span class="line fade-in fade-in-3">
+        <span class="prompt"><span class="user">admin</span><span class="at">@</span><span class="host">srv-portfolio</span>:<span class="path">~</span>$ </span>
+        <span class="cmd">ls ./contact/</span>
+      </span>
+      <div class="output fade-in fade-in-4">
+        <span style="color:var(--gray); font-size:12px;">github/  linkedin/  email/  cv.pdf</span>
+      </div>
+
+      <div class="cta-row fade-in fade-in-5">
+        <a href="#projects" class="btn">▶ voir les projets</a>
+        <a href="#contact" class="btn btn-ghost">$ get --contact</a>
+      </div>
+
+      <span class="line fade-in fade-in-5" style="margin-top:1.5rem; display:block;">
+        <span class="prompt"><span class="user">admin</span><span class="at">@</span><span class="host">srv-portfolio</span>:<span class="path">~</span>$ </span>
+        <span class="cursor"></span>
+      </span>
+    </div>
+  </div>
+</section>
+
+<!-- SKILLS -->
+<section id="skills">
+  <div class="section-header reveal">
+    <h2>COMPÉTENCES</h2>
+  </div>
+  <div class="skills-grid">
+    <div class="skill-card reveal">
+      <div class="skill-cat">Systèmes</div>
+      <div class="skill-name">Systèmes d'exploitation</div>
+      <div class="skill-items">
+        <span class="skill-item">Windows Server</span>
+        <span class="skill-item">Linux Ubuntu</span>
+        <span class="skill-item">Kali Linux</span>
+        <span class="skill-item">Active Directory</span>
+      </div>
+    </div>
+    <div class="skill-card reveal">
+      <div class="skill-cat">Réseaux</div>
+      <div class="skill-name">Infrastructure réseau</div>
+      <div class="skill-items">
+        <span class="skill-item">TCP/IP</span>
+        <span class="skill-item">DNS / DHCP</span>
+        <span class="skill-item">VLAN</span>
+        <span class="skill-item">VPN</span>
+        <span class="skill-item">Mikrotik</span>
+      </div>
+    </div>
+    <div class="skill-card reveal">
+      <div class="skill-cat">Sécurité</div>
+      <div class="skill-name">Hardening &amp; Pare-feu</div>
+      <div class="skill-items">
+        <span class="skill-item">Firewall</span>
+        <span class="skill-item">IDS/IPS</span>
+        <span class="skill-item">Antivirus</span>
+        <span class="skill-item">Let's Encrypt / PKI</span>
+        <span class="skill-item">SSH hardening</span>
+      </div>
+    </div>
+    <div class="skill-card reveal">
+      <div class="skill-cat">Virtualisation</div>
+      <div class="skill-name">Cloud-ready</div>
+      <div class="skill-items">
+        <span class="skill-item">VMware</span>
+        <span class="skill-item">HyperV</span>
+        <span class="skill-item">VirtualBox</span>
+        <span class="skill-item">NComputing</span>
+        <span class="skill-item">Cluster NLB</span>
+      </div>
+    </div>
+    <div class="skill-card reveal">
+      <div class="skill-cat">Scripting &amp; Dev</div>
+      <div class="skill-name">Automatisation</div>
+      <div class="skill-items">
+        <span class="skill-item">Bash</span>
+        <span class="skill-item">JavaScript</span>
+        <span class="skill-item">HTML / CSS</span>
+        <span class="skill-item">Oracle Database</span>
+      </div>
+    </div>
+    <div class="skill-card reveal">
+      <div class="skill-cat">Outils &amp; CRM</div>
+      <div class="skill-name">Gestion &amp; Supervision</div>
+      <div class="skill-items">
+        <span class="skill-item">HubSpot CRM</span>
+        <span class="skill-item">Git</span>
+        <span class="skill-item">Intranet</span>
+        <span class="skill-item">Câblage réseau</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PROJETS -->
+<section id="projects">
+  <div class="section-header reveal">
+    <h2>PROJETS</h2>
+  </div>
+  <div class="projects-grid">
+
+    <div class="project-card reveal">
+      <div>
+        <div class="project-tag">Infrastructure multisites</div>
+        <div class="project-title">Gestion d'infrastructures multisites — INCC</div>
+        <div class="project-desc">
+          Responsable de la gestion et maintenance des infrastructures informatiques multisites.
+          Optimisation des performances via la virtualisation (VMware, NComputing),
+          et mise en place d'un CRM HubSpot pour le CallCenter.
+        </div>
+        <div class="project-stack">
+          <span class="stack-item">VMware</span>
+          <span class="stack-item">NComputing</span>
+          <span class="stack-item">HubSpot CRM</span>
+          <span class="stack-item">Windows Server</span>
+        </div>
+      </div>
+      <span class="project-num">01</span>
+    </div>
+
+    <div class="project-card reveal">
+      <div>
+        <div class="project-tag">Haute disponibilité</div>
+        <div class="project-title">Cluster NLB — Windows Server 2016</div>
+        <div class="project-desc">
+          Mise en place d'un cluster NLB (Network Load Balancing) sur Windows Server 2016
+          pour assurer la haute disponibilité des services. Installation et configuration
+          d'Oracle Database en environnement virtualisé.
+        </div>
+        <div class="project-stack">
+          <span class="stack-item">Windows Server 2016</span>
+          <span class="stack-item">NLB Cluster</span>
+          <span class="stack-item">Oracle Database</span>
+          <span class="stack-item">VMware</span>
+          <span class="stack-item">VirtualBox</span>
+        </div>
+      </div>
+      <span class="project-num">02</span>
+    </div>
+
+    <div class="project-card reveal">
+      <div>
+        <div class="project-tag">Web &amp; Sécurité</div>
+        <div class="project-title">Intranet &amp; Site web — SINARES</div>
+        <div class="project-desc">
+          Mise en place de l'intranet de SINARES, renouvellement du certificat SSL de FINDEV
+          avec Let's Encrypt, et création d'un site web prestataire de services de voyage.
+        </div>
+        <div class="project-stack">
+          <span class="stack-item">Intranet</span>
+          <span class="stack-item">Let's Encrypt</span>
+          <span class="stack-item">HTML / CSS</span>
+          <span class="stack-item">JavaScript</span>
+        </div>
+      </div>
+      <span class="project-num">03</span>
+    </div>
+
+    <div class="project-card reveal">
+      <div>
+        <div class="project-tag">Fin d'études</div>
+        <div class="project-title">Infrastructure sécurisée pour PME — IAI</div>
+        <div class="project-desc">
+          Projet de fin d'études portant sur la conception d'une infrastructure informatique
+          sécurisée et performante pour une PME. Spécialisation en systèmes et réseaux,
+          Institut Africain d'Informatique.
+        </div>
+        <div class="project-stack">
+          <span class="stack-item">Systèmes</span>
+          <span class="stack-item">Réseaux</span>
+          <span class="stack-item">Sécurité</span>
+          <span class="stack-item">Architecture SI</span>
+        </div>
+      </div>
+      <span class="project-num">04</span>
+    </div>
+
+  </div>
+</section>
+
+<!-- EXPÉRIENCE -->
+<section id="experience">
+  <div class="section-header reveal">
+    <h2>EXPÉRIENCE</h2>
+  </div>
+  <div class="timeline">
+
+    <div class="titem reveal">
+      <div class="tdate">AOÛT 2023 — PRÉSENT</div>
+      <div class="ttitle">Administrateur système &amp; maintenance informatique</div>
+      <div class="tcompany">INCC — Yaoundé</div>
+      <ul class="tdesc">
+        <li>Responsable de la gestion et maintenance des infrastructures informatiques multisites</li>
+        <li>Optimisation des performances et disponibilité des systèmes via la virtualisation (VMware, NComputing)</li>
+        <li>Mise en place d'un CRM HubSpot pour le CallCenter</li>
+        <li>Formation et accompagnement des équipes techniques sur les bonnes pratiques sécurité</li>
+      </ul>
+    </div>
+
+    <div class="titem reveal">
+      <div class="tdate">JANVIER 2022 — AVRIL 2023</div>
+      <div class="ttitle">Assistant maintenance informatique</div>
+      <div class="tcompany">MEGATIM — Yaoundé</div>
+      <ul class="tdesc">
+        <li>Sertissage des câbles réseaux</li>
+        <li>Déploiement et administration de solutions de virtualisation (VMware, VirtualBox)</li>
+        <li>Installation et configuration d'Oracle Database</li>
+        <li>Mise en place d'un cluster NLB sur Windows Server 2016</li>
+      </ul>
+    </div>
+
+    <div class="titem reveal">
+      <div class="tdate">MARS 2022 — NOVEMBRE 2022</div>
+      <div class="ttitle">Assistant informatique</div>
+      <div class="tcompany">SINARES — Yaoundé</div>
+      <ul class="tdesc">
+        <li>Mise en place de l'intranet de SINARES</li>
+        <li>Renouvellement du certificat FINDEV avec Let's Encrypt</li>
+        <li>Création d'un site web prestataire de services de voyage</li>
+      </ul>
+    </div>
+
+    <div class="titem reveal">
+      <div class="tdate">2020 — 2021</div>
+      <div class="ttitle">Diplôme d'ingénieur des travaux informatiques</div>
+      <div class="tcompany">Institut Africain D'Informatique (IAI) — Yaoundé</div>
+      <ul class="tdesc">
+        <li>Spécialisation en systèmes et réseaux</li>
+        <li>Projet de fin d'études : conception d'une infrastructure informatique sécurisée pour une PME</li>
+      </ul>
+    </div>
+
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section id="contact">
+  <div class="section-header reveal">
+    <h2>CONTACT</h2>
+  </div>
+  <div style="color: var(--gray); font-size:12px; margin-bottom: 1.5rem;" class="reveal">
+    <span style="color:var(--green-dim)">$</span> ping me — ouvert aux opportunités
+  </div>
+  <div class="contact-grid">
+    <a href="mailto:Kennethdisso040@gmail.com" class="contact-card reveal">
+      <div class="contact-icon">✉</div>
+      <div>
+        <div class="contact-label">Email</div>
+        <div class="contact-value">Kennethdisso040@gmail.com</div>
+      </div>
+    </a>
+    <a href="https://www.linkedin.com/in/mbock-disso-742645410/" target="_blank" class="contact-card reveal">
+      <div class="contact-icon">in</div>
+      <div>
+        <div class="contact-label">LinkedIn</div>
+        <div class="contact-value">linkedin.com/in/mbock-disso</div>
+      </div>
+    </a>
+    <a href="https://github.com/NMDKKK" target="_blank" class="contact-card reveal">
+      <div class="contact-icon">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+      </div>
+      <div>
+        <div class="contact-label">GitHub</div>
+        <div class="contact-value">github.com/NMDKKK</div>
+      </div>
+    </a>
+    <a href="cv_Kenneth_DISSO.pdf" download class="contact-card reveal">
+      <div class="contact-icon">📄</div>
+      <div>
+        <div class="contact-label">CV</div>
+        <div class="contact-value">Télécharger mon CV (.pdf)</div>
+      </div>
+    </a>
+    <a href="tel:+237656624964" class="contact-card reveal">
+      <div class="contact-icon">📞</div>
+      <div>
+        <div class="contact-label">Téléphone</div>
+        <div class="contact-value">+237 656 62 49 64 / 676 91 28 44</div>
+      </div>
+    </a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <span>~/portfolio</span> — construit avec HTML/CSS — hébergé sur <span>GitHub Pages</span><br>
+  <span style="color:var(--green-faint); font-size:10px; margin-top:4px; display:block;">© 2026 NWAHA MBOCK DISSO Kenneth — tous droits réservés</span>
+</footer>
+
+<script>
+  // Scroll reveal
+  const reveals = document.querySelectorAll('.reveal');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.1 });
+  reveals.forEach(el => observer.observe(el));
+
+  // Random glitch effect on title
+  const big = document.querySelector('.big');
+  if (big) {
+    const original = big.textContent;
+    const chars = '!@#$%^&*ABCDEFabcdef01234';
+    setInterval(() => {
+      if (Math.random() > 0.92) {
+        const idx = Math.floor(Math.random() * original.length);
+        const arr = original.split('');
+        arr[idx] = chars[Math.floor(Math.random() * chars.length)];
+        big.textContent = arr.join('');
+        setTimeout(() => big.textContent = original, 80);
+      }
+    }, 2000);
+  }
+</script>
+
+</body>
+</html>
